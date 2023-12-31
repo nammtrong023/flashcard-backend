@@ -35,7 +35,6 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'social_accounts',
     'flashcards',
-    'product',
     'classes',
     'rest_framework_simplejwt',
     'corsheaders',
