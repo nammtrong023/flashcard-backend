@@ -7,27 +7,9 @@ from .utils import Github, Google, login_oauth2
 
 
 class GoogleSignInSerializer(serializers.Serializer):
-    access_token = serializers.CharField(min_length=6)
-
-    def validate_access_token(self, access_token):
-        user_data = Google.validate(access_token)
-
-        try:
-            user_data['sub']
-        except Exception as e:
-            raise serializers.ValidationError(
-                f"{e} this token has expired or invalid please try again"
-            )
-
-        if user_data['aud'] != settings.GOOGLE_CLIENT_ID:
-            raise AuthenticationFailed('Could not verify user.')
-
-        user_id = user_data['sub']
-        email = user_data['email']
-        name = user_data['given_name']
-        provider = 'google'
-
-        return login_oauth2(provider, user_id, email, name)
+    user_id = serializers.CharField()
+    email = serializers.CharField()
+    name = serializers.CharField()
 
 
 class GithubLoginSerializer(serializers.Serializer):

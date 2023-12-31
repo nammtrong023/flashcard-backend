@@ -4,6 +4,8 @@ from django.utils.encoding import force_str, smart_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from .models import User
 from .utils import send_email_reset_pw
@@ -43,11 +45,6 @@ class ResendOtpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
 
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(max_length=155, min_length=6)
-    password = serializers.CharField(max_length=68, write_only=True)
-
-
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
@@ -64,11 +61,9 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             site = settings.FRONTEND_URL
 
             abslink = f"{site}/password-recovery/{uidb64}/{token}"
-            email_body = f"Hi {user.name} use the link below to reset your password {abslink}"
 
             attrs = {
-                'email_body': email_body,
-                'email_subject': "Reset your Password",
+                'url': abslink,
                 'to_email': user.email,
             }
             send_email_reset_pw(attrs)
@@ -112,3 +107,30 @@ class SetNewPasswordSerializer(serializers.Serializer):
             return user
         except Exception as e:
             return AuthenticationFailed("link is invalid or has expired")
+
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = attrs.get('refresh')
+        user = self.get_user_from_refresh_token(refresh)
+
+        if user:
+            return self.get_tokens(user)
+
+        return super().validate(attrs)
+
+    def get_user_from_refresh_token(self, refresh):
+        try:
+            refresh_token = RefreshToken(refresh)
+            user = refresh_token.user
+            return user
+        except Exception as e:
+            return None
+
+    def get_tokens(self, user):
+        refresh = RefreshToken.for_user(user)
+        access = AccessToken.for_user(user)
+        return {
+            'refresh': str(refresh),
+            'access': str(access),
+        }

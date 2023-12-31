@@ -1,5 +1,12 @@
+from accounts.utils import public_view
 from django.urls import path
 
 from . import views
 
-urlpatterns = [path('login-gg', views.GoogleOauthSignInview.as_view())]
+urlpatterns = [
+    path(
+        'google-oauth',
+        public_view(views.GoogleOauthSignInview),
+        name='google-oauth',
+    )
+]

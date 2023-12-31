@@ -1,3 +1,5 @@
+from accounts.models import User
+from accounts.serializer import UserSerializer
 from rest_framework import serializers
 
 from .models import Flashcard, FlashcardSet, FlashcardSetViewer
@@ -58,6 +60,7 @@ class FlashcardSetViewerSerializer(serializers.ModelSerializer):
 
 
 class FlashcardSetSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     flashcards = FlashcardSerializer(many=True, read_only=True)
     flashcard_set_viewer = FlashcardSetViewerSerializer(read_only=True)
 
@@ -66,7 +69,8 @@ class FlashcardSetSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        flashcard_set = FlashcardSet.objects.create()
+        owner = validated_data.get('owner')
+        flashcard_set = FlashcardSet.objects.create(owner_id=owner.id)
 
         for _ in range(4):
             Flashcard.objects.create(flashcard_set=flashcard_set)

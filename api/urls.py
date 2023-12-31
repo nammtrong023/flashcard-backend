@@ -5,4 +5,5 @@ urlpatterns = [
     path("oauth/", include('social_accounts.urls')),
     path("products/", include('product.urls')),
     path("flashcards/", include('flashcards.urls')),
+    path("classes/", include('classes.urls')),
 ]

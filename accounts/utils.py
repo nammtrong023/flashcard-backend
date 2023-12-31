@@ -1,8 +1,14 @@
 import random
 
 from django.conf import settings
-from django.core.mail import EmailMessage, send_mail
+from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.authentication import (
+    InvalidToken,
+    TokenError,
+    TokenUser,
+)
 
 from .models import OneTimePassword, User
 
@@ -15,19 +21,39 @@ def sendOtpToUser(email):
     email_body = render_to_string('confirmation.html', {'otp': otp})
 
     send_mail(
-        subject='Verify',
+        subject=f'Your otp is {otp}',
         message=email_body,
         from_email=settings.EMAIL_HOST,
         recipient_list=[user.email],
-        html_message=email_body,  # Set the HTML version of the email body
+        html_message=email_body,
     )
 
 
 def send_email_reset_pw(data):
-    email = EmailMessage(
-        subject=data['email_subject'],
-        body=data['email_body'],
-        from_email=settings.EMAIL_HOST_USER,
-        to=[data['to_email']],
+    email_body = render_to_string(
+        'password-recovery.html', {'url': data['url']}
     )
-    email.send()
+
+    send_mail(
+        subject='Reset Password',
+        message=email_body,
+        from_email=settings.EMAIL_HOST,
+        recipient_list=data['to_email'],
+        html_message=email_body,
+    )
+
+
+def get_current_user_id(access_token):
+    try:
+        token_user = TokenUser(access_token)
+        return token_user.id
+
+    except InvalidToken:
+        raise AuthenticationFailed('Invalid token')
+
+    except TokenError:
+        raise AuthenticationFailed('Token is invalid or expired')
+
+
+def public_view(view):
+    return view.as_view(authentication_classes=[])

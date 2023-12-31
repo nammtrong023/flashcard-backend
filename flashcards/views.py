@@ -1,3 +1,4 @@
+from accounts.utils import get_current_user_id
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -16,7 +17,9 @@ class FlashCardCreateApiView(generics.ListCreateAPIView):
     serializer_class = FlashcardSerializer
 
 
-class FlashcardRetrieveUpdateDestroyApiView(generics.GenericAPIView):
+class FlashcardRetrieveUpdateDestroyApiView(
+    generics.RetrieveUpdateDestroyAPIView
+):
     queryset = Flashcard.objects.all()
     serializer_class = FlashcardSerializer
 
@@ -47,8 +50,14 @@ class FlashcardRetrieveUpdateDestroyApiView(generics.GenericAPIView):
 
 # FLASHCARD_SET
 class FlashcardSetListCreateApiView(generics.ListCreateAPIView):
-    queryset = FlashcardSet.objects.all()
     serializer_class = FlashcardSetSerializer
+    queryset = FlashcardSet.objects.all()
+
+    def get(self, request, owner_id):
+        owner_id = self.kwargs.get('owner_id')
+        queryset = FlashcardSet.objects.filter(owner__id=owner_id)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class FlashcardSetRetrieveUpdateDestroyApiView(
@@ -58,7 +67,6 @@ class FlashcardSetRetrieveUpdateDestroyApiView(
     serializer_class = FlashcardSetSerializer
 
     def put(self, request, *args, **kwargs):
-        print(request.data)
         flashcard_set_id = self.kwargs.get('pk')
         flashcard_set = FlashcardSet.objects.get(id=flashcard_set_id)
 

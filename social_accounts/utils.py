@@ -1,10 +1,9 @@
 import requests
+from accounts.models import Account, User
 from django.conf import settings
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from rest_framework.exceptions import AuthenticationFailed
-
-from accounts.models import Account, User
 
 
 class Google:
@@ -59,7 +58,11 @@ def login_oauth2(provider, provider_id, email, name):
 
     if account_exists:
         user = User.objects.get(email=email)
-        return {'tokens': user.tokens()}
+        tokens = user.tokens()
+        return {
+            "access": str(tokens.get('access')),
+            "refresh": str(tokens.get('refresh')),
+        }
 
     user_exists = User.objects.filter(email=email).exists()
     if user_exists:
@@ -85,6 +88,6 @@ def login_oauth2(provider, provider_id, email, name):
 
         tokens = new_user.tokens()
         return {
-            "access_token": str(tokens.get('access_token')),
-            "refresh_token": str(tokens.get('refresh_token')),
+            "access": str(tokens.get('access')),
+            "refresh": str(tokens.get('refresh')),
         }

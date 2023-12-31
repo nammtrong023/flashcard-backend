@@ -1,3 +1,4 @@
+from accounts.models import User
 from django.db import models
 from multiselectfield import MultiSelectField
 
@@ -5,6 +6,9 @@ from multiselectfield import MultiSelectField
 class FlashcardSet(models.Model):
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.CharField(max_length=255, blank=True, null=True)
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="flashcard_sets"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -46,4 +50,3 @@ class FlashcardSetViewer(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # userId

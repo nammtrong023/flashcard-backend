@@ -1,3 +1,4 @@
+from api.permission import CustomPermission
 from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import DjangoUnicodeDecodeError, smart_str
@@ -5,10 +6,10 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import OneTimePassword, User
 from .serializer import (
-    LoginSerializer,
     PasswordResetRequestSerializer,
     ResendOtpSerializer,
     SetNewPasswordSerializer,
@@ -20,6 +21,8 @@ from .utils import sendOtpToUser
 
 # Create your views here.
 class RegisterView(generics.GenericAPIView):
+    permission_classes = [CustomPermission]
+
     def post(self, request):
         user = request.data
         serializer = UserSerializer(data=user)
@@ -35,6 +38,29 @@ class RegisterView(generics.GenericAPIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        user = authenticate(request, email=email, password=password)
+
+        if not user:
+            raise AuthenticationFailed("Invalid credential try again")
+        if not user.is_verified:
+            raise AuthenticationFailed("Email is not verified")
+
+        tokens = user.tokens()
+        data = {
+            "access": str(tokens.get('access')),
+            "refresh": str(tokens.get('refresh')),
+        }
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class VerifyEmailView(generics.GenericAPIView):
@@ -62,8 +88,14 @@ class VerifyEmailView(generics.GenericAPIView):
                 user.save()
                 OneTimePassword.objects.filter(user=user).delete()
 
+                tokens = user.tokens()
+                data = {
+                    "access": str(tokens.get('access')),
+                    "refresh": str(tokens.get('refresh')),
+                }
+
                 return Response(
-                    {'message': 'Verified email'},
+                    {'data': data, 'message': 'Verified email'},
                     status=status.HTTP_200_OK,
                 )
             elif is_valid_otp and user_code.has_expired():
@@ -103,29 +135,6 @@ class ResendOtpView(generics.GenericAPIView):
             {'message': 'Resend otp successfully'},
             status=status.HTTP_200_OK,
         )
-
-
-class LoginView(generics.GenericAPIView):
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = request.data.get('email')
-        password = request.data.get('password')
-
-        user = authenticate(request, email=email, password=password)
-
-        if not user:
-            raise AuthenticationFailed("Invalid credential try again")
-        if not user.is_verified:
-            raise AuthenticationFailed("Email is not verified")
-
-        tokens = user.tokens()
-        data = {
-            "access_token": str(tokens.get('access_token')),
-            "refresh_token": str(tokens.get('refresh_token')),
-        }
-        return Response(data, status=status.HTTP_200_OK)
 
 
 class PasswordResetRequestView(generics.GenericAPIView):
@@ -181,3 +190,8 @@ class SetNewPasswordView(generics.GenericAPIView):
             {'success': True, 'message': "password reset is succesful"},
             status=status.HTTP_200_OK,
         )
+
+
+class UserRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
