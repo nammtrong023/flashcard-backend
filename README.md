@@ -4,7 +4,7 @@ Mindnex is a Quiz app. In this Project I have used Django and Django-Rest-Framew
 
 ## Frontend Source
 
-The frontend source code for this project, you can found in the [frontend repository]([https://github.com/nammtrong023/flashcard]).
+The frontend source code for this project, you can found in the [frontend repository](https://github.com/nammtrong023/flashcard-app).
 
 ## Features
 
